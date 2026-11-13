@@ -3,7 +3,7 @@
     <header class="page-head">
       <div>
         <h2>同期群分析管理</h2>
-        <p class="page-desc">定义同期群分析模型，按首次事件划分群组并追踪多周期留存和行为指标。</p>
+        <p class="page-desc">按首次事件划分群组追踪多周期留存；由漏斗联合生成的同期群与漏斗、联合视图共用同一口径版本。</p>
       </div>
       <div class="page-actions">
         <button class="btn primary" type="button" @click="openCreate">登记同期群定义</button>
@@ -70,7 +70,7 @@ import { request } from '@/api/client'
 type Row = Record<string, string | number | null>
 
 const ENDPOINT = '/api/cohort'
-const columns = ["群组编号", "群组名称", "划分事件", "观察指标", "观察周期天", "群组粒度", "留存阈值", "最后计算时间"]
+const columns = ["群组编号", "群组名称", "划分事件", "观察指标", "观察周期天", "群组粒度", "留存阈值", "最后计算时间", "来源漏斗编号", "口径版本", "联合状态"]
 const actions = ["提交模型校验", "启用同期群", "归档同期群"]
 const statuses = ["草稿", "模型校验中", "已启用", "已归档"]
 const stats = [{"label": "同期群定义总数", "value": 0}, {"label": "已启用同期群", "value": 0}, {"label": "模型校验中", "value": 0}]

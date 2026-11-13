@@ -1,8 +1,13 @@
-"""漏斗分析业务规则：状态流转、字段校验与筛选口径都收在这里。"""
+"""漏斗分析业务规则：状态流转、字段校验与筛选口径都收在这里。
+
+漏斗是“漏斗留存联合视图”的业务入口：执行「启用漏斗」时，会把步骤事件与转化窗口
+冻结成口径版本，并联动 JointRetentionService 生成按步骤事件划分的同期群留存结果。
+"""
 from __future__ import annotations
 
 from typing import Any
 
+from app.services.joint_retention import joint_service
 from app.store import store
 
 MODULE = "funnel"
@@ -28,10 +33,22 @@ class FunnelService:
             rows = [row for row in rows if row.get("status") == status]
         total = len(rows)
         start = max(page - 1, 0) * size
-        return rows[start:start + size], total
+        page_rows = [dict(row) for row in rows[start:start + size]]
+        return page_rows, total
 
     def get_entry(self, entry_id: int) -> dict[str, Any] | None:
-        return store.find(MODULE, entry_id)
+        entry = store.find(MODULE, entry_id)
+        if entry is None:
+            return None
+        # 漏斗详情引用与联合视图、同期群完全一致的口径版本
+        joint = joint_service.get_view(entry_id)
+        detail = dict(entry)
+        if joint is not None:
+            detail["活跃版本"] = joint.get("口径版本")
+            detail["历史版本"] = joint.get("历史版本", [])
+            detail["联合同期群"] = (joint.get("同期群") or {}).get("群组编号")
+            detail["联合汇总"] = joint.get("汇总")
+        return detail
 
     def create_entry(self, values: dict[str, Any]) -> tuple[dict[str, Any] | None, list[str]]:
         missing = [field for field in REQUIRED_FIELDS if not str(values.get(field) or "").strip()]
@@ -58,4 +75,15 @@ class FunnelService:
         entry["status"] = target
         entry["pending"] = target != STATUS_ORDER[-1]
         entry["abnormal"] = action in NEGATIVE_ACTIONS
-        return entry, f"漏斗定义已{action}"
+
+        joint_message = ""
+        if action == "启用漏斗":
+            # 联合入口：启用即冻结口径版本并生成同期群留存；并发/重复提交在服务内去重
+            result = joint_service.on_funnel_enabled(entry_id)
+            if result.get("generated"):
+                joint_message = f"；{result['message']}（同期群 {result.get('同期群编号', '')}）"
+            elif result.get("deduplicated"):
+                joint_message = f"；{result['message']}"
+            else:
+                joint_message = f"；联合结果未生成：{result.get('message', '原因未知')}"
+        return entry, f"漏斗定义已{action}{joint_message}"

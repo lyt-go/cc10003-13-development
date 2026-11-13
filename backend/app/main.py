@@ -5,14 +5,25 @@
 """
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.routers import ROUTERS
+from app.services.joint_retention import joint_service
 from app.store import store
 
-app = FastAPI(title="指标口径与分析实验平台", version="1.0.0")
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    # 启动即为已启用漏斗生成同版本的同期群留存快照（幂等，重复启动不产生第二份）
+    joint_service.bootstrap()
+    yield
+
+
+app = FastAPI(title="指标口径与分析实验平台", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -21,6 +32,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 for module in ROUTERS:
     app.include_router(module.router)

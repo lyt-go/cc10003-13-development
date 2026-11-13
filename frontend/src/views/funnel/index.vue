@@ -3,7 +3,7 @@
     <header class="page-head">
       <div>
         <h2>漏斗分析管理</h2>
-        <p class="page-desc">定义行为漏斗分析模型，配置多步骤转化路径、时间窗口和事件关联。</p>
+        <p class="page-desc">定义行为漏斗分析模型；启用漏斗会按步骤事件生成同版本同期群，可前往「漏斗留存联合视图」查看转化与留存。</p>
       </div>
       <div class="page-actions">
         <button class="btn primary" type="button" @click="openCreate">登记漏斗定义</button>
@@ -70,7 +70,7 @@ import { request } from '@/api/client'
 type Row = Record<string, string | number | null>
 
 const ENDPOINT = '/api/funnel'
-const columns = ["漏斗编号", "漏斗名称", "步骤序列", "转化窗口天", "步骤名称列表", "事件定义", "关联指标", "最小样本量"]
+const columns = ["漏斗编号", "漏斗名称", "步骤序列", "转化窗口天", "步骤名称列表", "事件定义", "关联指标", "最小样本量", "活跃版本", "联合群组数"]
 const actions = ["提交模型校验", "启用漏斗", "归档漏斗"]
 const statuses = ["草稿", "模型校验中", "已启用", "已归档"]
 const stats = [{"label": "漏斗定义总数", "value": 0}, {"label": "已启用漏斗", "value": 0}, {"label": "模型校验中", "value": 0}]

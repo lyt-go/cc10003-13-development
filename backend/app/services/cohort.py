@@ -31,7 +31,22 @@ class CohortService:
         return rows[start:start + size], total
 
     def get_entry(self, entry_id: int) -> dict[str, Any] | None:
-        return store.find(MODULE, entry_id)
+        entry = store.find(MODULE, entry_id)
+        if entry is None:
+            return None
+        # 联合同期群：状态页直接展示与漏斗、联合视图一致的口径版本与窗口来源
+        detail = dict(entry)
+        funnel_code = entry.get("来源漏斗编号")
+        if funnel_code:
+            from app.services.joint_retention import joint_service
+
+            for funnel in store.rows("funnel"):
+                if funnel.get("漏斗编号") == funnel_code:
+                    view = joint_service.get_view(int(funnel["id"]))
+                    detail["活跃版本"] = (view or {}).get("口径版本")
+                    detail["历史版本"] = (view or {}).get("历史版本", [])
+                    break
+        return detail
 
     def create_entry(self, values: dict[str, Any]) -> tuple[dict[str, Any] | None, list[str]]:
         missing = [field for field in REQUIRED_FIELDS if not str(values.get(field) or "").strip()]
